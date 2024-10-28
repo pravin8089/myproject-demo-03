@@ -1,0 +1,13 @@
+[cli.logs]
+save_logs = true
+path = "/home/ec2-user/.config/snowflake/logs"
+level = "info"
+
+[connections.snowflake]
+account = "jkphxak-uvb85840"
+user = "pravin082024"
+password = "Orange@082024"
+database = "RAMU"
+schema = "PUBLIC"
+warehouse = "COMPUTE_WH"
+role = "ACCOUNTADMIN"

@@ -1,5 +1,5 @@
 # make sure pip is installed first -- > sudo yum install -y python3-pip
-# run below package using command  -- > pip install --no-deps --upgrade -r requirements.txt
+# run below package using command  -- > pip install --upgrade -r requirements.txt
 
 unzip                       # unzip: Unzipping archive files
 pandas                      # pandas: Data manipulation and analysis
@@ -12,4 +12,5 @@ pyyaml                      # pyyaml: Parsing YAML files
 boto3                       # boto3: AWS SDK for Python, if using AWS services
 pyarrow                     # pyarrow: Columnar data format support for Apache Arrow
 dask                        # dask: Parallel computing with task scheduling
+click                       # Add this line for the click module
 snowflake-cli               # snowflake-cli: Snowflake CLI for interacting with Snowflake
