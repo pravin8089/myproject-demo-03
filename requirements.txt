@@ -12,3 +12,4 @@ pyyaml                      # pyyaml: Parsing YAML files
 boto3                       # boto3: AWS SDK for Python, if using AWS services
 pyarrow                     # pyarrow: Columnar data format support for Apache Arrow
 dask                        # dask: Parallel computing with task scheduling
+snowflake-cli               # snowflake-cli: Snowflake CLI for interacting with Snowflake
