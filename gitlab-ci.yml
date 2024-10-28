@@ -1,0 +1,108 @@
+stages:
+  - build
+  - test
+  - push-to-registry
+  - deploy
+
+variables:
+  ARTIFACTORY_PYTHON_REPO: "https://artifactory.example.com/artifactory/api/pypi/your-repo/simple"
+  ARTIFACTORY_DOCKER_REPO: "https://artifactory.example.com/artifactory/docker-repo"
+  # REMOTE_VM_PRIVATE_KEY: "PRIVATE KEY HERE"
+  REMOTE_VM_USER: "ec2-user"
+  REMOTE_VM_HOST: "ec2-44-201-226-232.compute-1.amazonaws.com"
+  ARTIFACTS_DIR: "/home/$REMOTE_VM_USER/artifacts_python"
+  SNOWFLAKE_CONFIG_FILE: "configs/db_snowflake_config.json"
+
+build-job:
+  stage: build
+  image: python:3.11.2-slim-buster
+  before_script:
+    - apt update  && apt install -y zip
+  script:
+    - ls -al
+    - pwd
+    - echo "Zipping required folders and files..."
+    - zip -r artifacts.zip scripts configs requirements.txt .gitlab-ci.yml README.md
+    - ls -al
+  artifacts:
+    paths:
+    - artifacts.zip
+  # when: manual
+
+test-job:
+  stage: test
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    - sonar-scanner
+    - echo "Test job"
+  needs: ['build-job']
+
+push-job:
+  stage: push-to-registry
+  image: alpine
+  before_script:
+    - apk update && apk add curl
+  script:
+    - ls -al
+    - 'curl --header "JOB-TOKEN: $CI_JOB_TOKEN" --upload-file artifacts.zip "$CI_API_V4_URL/projects/$CI_PROJECT_ID/packages/generic/application/3.38.1/artifacts.zip"'
+  artifacts:
+    paths:
+    - artifacts.zip
+  needs: ['build-job']
+  # when: manual
+
+deploy-jobs:
+  stage: deploy
+  image: alpine
+  before_script:
+    - apk update && apk add openssh-client
+  script:
+    - apk add openssh
+    - mkdir -p ~/.ssh
+    - echo "$REMOTE_VM_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - echo " -------------- connecting to remote VM as $REMOTE_VM_USER@$REMOTE_VM_HOST -------------- "
+    - scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa ./artifacts.zip $REMOTE_VM_USER@$REMOTE_VM_HOST:/home/$REMOTE_VM_USER/
+    - |
+      ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $REMOTE_VM_USER@$REMOTE_VM_HOST <<EOF
+        echo " -------------- Installing python3-pip and unzip -------------- "
+        sudo yum install -y python3-pip unzip
+
+        echo " -------------- Unzipping artifacts.zip --------------  "
+        unzip -o /home/$REMOTE_VM_USER/artifacts.zip -d $ARTIFACTS_DIR
+
+        echo " -------------- Copying Snowflake config file -------------- "
+        mkdir -p /home/$REMOTE_VM_USER/.config/snowflake/
+        cp $ARTIFACTS_DIR/configs/config.toml /home/$REMOTE_VM_USER/.config/snowflake/
+
+        echo " -------------- Setting correct permissions -------------- "
+        chmod 0600 /home/$REMOTE_VM_USER/.config/snowflake/config.toml
+
+        ls -lart /home/$REMOTE_VM_USER/.config/snowflake/
+        
+        echo " -------------- Creating logs and data directories  --------------"
+        mkdir -p $ARTIFACTS_DIR/{logs,data}
+        
+        ls -lart $ARTIFACTS_DIR/{logs,data}
+
+        echo " -------------- Installing Python packages from requirements.txt -------------- "
+        pip install --upgrade -r $ARTIFACTS_DIR/requirements.txt
+
+         echo " -------------- Listing contents of artifacts_python directory -------------- "
+        ls -lart $ARTIFACTS_DIR
+
+        echo " -------------- Removing artifacts.zip -------------- "
+        rm /home/$REMOTE_VM_USER/artifacts.zip
+
+        echo " -------------- Running setup_cron_jobs.sh -------------- "
+        /bin/bash $ARTIFACTS_DIR/scripts/setup_cron_jobs.sh
+
+        echo " -------------- Executing Snowflake SQL commands -------------- "
+        snow sql -f  $ARTIFACTS_DIR/scripts/ddl_commands.sql --connection="snowflake"
+                
+      EOF
+  artifacts:
+    paths:
+    - artifacts.zip
+  needs: ['push-job']
+  # when: manual
