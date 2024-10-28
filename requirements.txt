@@ -1,0 +1,14 @@
+# make sure pip is installed first -- > sudo yum install -y python3-pip
+# run below package using command  -- > pip install --no-deps --upgrade -r requirements.txt
+
+unzip                       # unzip: Unzipping archive files
+pandas                      # pandas: Data manipulation and analysis
+numpy                       # numpy: Numerical computing
+sqlalchemy                  # sqlalchemy: Database interaction
+cx_Oracle                   # cx_Oracle: Oracle database interface
+snowflake-snowpark-python   # snowflake-snowpark-python: Snowflake data processing
+requests                    # requests: Making HTTP requests
+pyyaml                      # pyyaml: Parsing YAML files
+boto3                       # boto3: AWS SDK for Python, if using AWS services
+pyarrow                     # pyarrow: Columnar data format support for Apache Arrow
+dask                        # dask: Parallel computing with task scheduling
